@@ -79,7 +79,7 @@ export class HomePage implements OnInit {
     // Se eliminan espacios en blanco al inicio y al final del texto ingresado
     const cleanTask = this.task.trim();
 
-    // Verificación de duplicados antes de proceder
+    // Verificacion de duplicados antes de proceder
     if (this.ifExistsTask(cleanTask)) {
       this.alertservice.alertMessage('Error', 'La tarea ya existe', 'OK');
       return;
