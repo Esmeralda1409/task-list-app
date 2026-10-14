@@ -1,14 +1,14 @@
-// Importaciones del núcleo de Angular para la creación del componente y la detección de cambios
-import { Component, inject, OnInit, ChangeDetectorRef } from '@angular/core';
+// Importaciones del núcleo de Angular
+import { Component, inject,  ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
-// Importación del plugin Preferences de Capacitor para el almacenamiento nativo en el dispositivo
+// Importación del plugin Preferences de Capacitor para almacenamiento nativo
 import { Preferences } from '@capacitor/preferences';
 
-// Importación del servicio personalizado para gestionar la visualización de alertas
+// Importación del servicio personalizado de alertas
 import { Alert } from '../../services/alert';
 
-// Importación de los componentes de la interfaz de Ionic necesarios para la vista (Standalone)
+// Importación de componentes de la interfaz de Ionic
 import {
   IonHeader,
   IonToolbar,
@@ -24,7 +24,7 @@ import {
   IonReorder,
 } from '@ionic/angular';
 
-// Importación de la función para registrar íconos y los vectores específicos que utilizaremos
+// Importación de íconos
 import { addIcons } from 'ionicons';
 import { addOutline, trashOutline, reorderThreeOutline } from 'ionicons/icons';
 
@@ -48,53 +48,52 @@ import { addOutline, trashOutline, reorderThreeOutline } from 'ionicons/icons';
     IonReorder,
   ],
 })
-export class HomePage implements OnInit {
-  // Inyección del servicio personalizado de alertas
+export class HomePage  {
+  // Inyección de dependencias
   private alertservice: Alert = inject(Alert);
-  // Inyección del detector de cambios para forzar la actualización de la interfaz cuando sea necesario
   private cdr: ChangeDetectorRef = inject(ChangeDetectorRef);
 
-  // Variable vinculada al input del formulario para almacenar el texto escrito
+  // Variables de estado
   public task: string = '';
-  // Arreglo en memoria que contiene el listado de tareas actual
   public tasks: string[] = [];
 
   constructor() {
-    // Registro de los íconos de Ionic en el ciclo de construcción
+    // Registro de íconos en el constructor
     addIcons({ addOutline, trashOutline, reorderThreeOutline });
-
-    // Carga de las tareas guardadas al momento de instanciar el componente
-    this.loadTasks();
   }
 
-
-  ngOnInit(): void {
+  
+  /**
+   * Ciclo de vida propio de Ionic: Lee las tareas directamente desde Preferences de forma asíncrona.
+   * Sin tipo de retorno.
+   */
+  async ionViewWillEnter() {
+    const { value } = await Preferences.get({ key: 'my_tasks' });
+    if (value) {
+      this.tasks = JSON.parse(value).filter((t: string) => t.trim() !== '');
+      this.cdr.detectChanges();
+    }
   }
 
   /**
-   * Método para agregar una nueva tarea a la lista.
-   * Valida que no esté vacía ni duplicada antes de mostrar la confirmación.
+   * Agrega una nueva tarea a la lista tras validar que no esté duplicada.
    */
   addTask(): void {
-    // Se eliminan espacios en blanco al inicio y al final del texto ingresado
     const cleanTask = this.task.trim();
 
-    // Verificacion de duplicados antes de proceder
     if (this.ifExistsTask(cleanTask)) {
       this.alertservice.alertMessage('Error', 'La tarea ya existe', 'OK');
       return;
     }
 
-    // Muestra la alerta de confirmación; si el usuario acepta, se ejecuta la función de guardado
     this.alertservice.confirmAlert(
       'Agregar Tarea',
       `¿Deseas agregar "${cleanTask}" a tu lista?`,
-      () => {
-        // Se crea un nuevo arreglo incluyendo la nueva tarea (inmutabilidad)
+      async () => {
         this.tasks = [...this.tasks, cleanTask];
-        this.saveTasks(); // Persistencia de los cambios en Preferences
-        this.task = '';   // Limpieza del campo de texto
-        this.cdr.detectChanges(); // Forzado de actualización en la interfaz
+        await this.saveTasks();
+        this.task = '';
+        this.cdr.detectChanges();
       },
       'Agregar',
       'Cancelar'
@@ -102,7 +101,7 @@ export class HomePage implements OnInit {
   }
 
   /**
-   * Verifica si la tarea ingresada ya existe dentro del arreglo (sin diferenciar mayúsculas/minúsculas).
+   * Verifica si la tarea ya existe sin distinguir mayúsculas de minúsculas.
    */
   private ifExistsTask(task: string): boolean {
     return this.tasks.some(
@@ -111,17 +110,16 @@ export class HomePage implements OnInit {
   }
 
   /**
-   * Muestra la alerta de confirmación para eliminar una tarea específica de la lista.
+   * Elimina la tarea elegida previa confirmación.
    */
   confirmDelete(taskToDelete: string): void {
     this.alertservice.confirmAlert(
       'Eliminar Tarea',
       `¿Estás seguro de que deseas eliminar "${taskToDelete}"?`,
-      () => {
-        // Se remueve la tarea seleccionada filtrando el arreglo
+      async () => {
         this.tasks = this.tasks.filter((t) => t !== taskToDelete);
-        this.saveTasks(); // Persistencia de la lista actualizada
-        this.cdr.detectChanges(); // Refresco de la vista
+        await this.saveTasks();
+        this.cdr.detectChanges();
       },
       'Eliminar',
       'Cancelar'
@@ -129,36 +127,21 @@ export class HomePage implements OnInit {
   }
 
   /**
-   * Evento que se ejecuta al finalizar el arrastre de un elemento para reordenar la lista.
+   * Reordena los elementos de la lista.
    */
-  handleReorder(ev: any): void {
-    // ev.detail.complete, actualiza el orden interno de los elementos según la posición visual
+  async handleReorder(ev: any) {
     this.tasks = ev.detail.complete([...this.tasks]);
-    this.saveTasks(); // Guarda el nuevo orden en el dispositivo
-    this.cdr.detectChanges(); // Sincroniza la vista
+    await this.saveTasks();
+    this.cdr.detectChanges();
   }
 
   /**
-   * Guarda el arreglo de tareas en el almacenamiento nativo usando Preferences de Capacitor.
-   * Se utiliza JSON.stringify porque Preferences solo almacena datos en formato de texto (string).
+   * Guarda las tareas en Preferences de forma asíncrona.
    */
-  private saveTasks(): void {
+ saveTasks() {
     Preferences.set({
       key: 'my_tasks',
       value: JSON.stringify(this.tasks),
-    });
-  }
-
-  /**
-   * Recupera las tareas almacenadas desde Preferences utilizando Promesas (.then) en lugar de async/await.
-   */
-  private loadTasks(): void {
-    Preferences.get({ key: 'my_tasks' }).then((result) => {
-      if (result.value) {
-        // Convierte el texto JSON de vuelta a arreglo y descarta entradas vacías
-        this.tasks = JSON.parse(result.value).filter((t: string) => t.trim() !== '');
-        this.cdr.detectChanges(); // Notifica a Angular para pintar las tareas en pantalla
-      }
     });
   }
 }

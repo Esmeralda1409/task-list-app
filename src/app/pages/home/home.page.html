@@ -1,11 +1,18 @@
+<!-- Encabezado principal de la aplicación -->
 <ion-header [translucent]="true">
+  <!-- Barra de herramientas superior -->
   <ion-toolbar>
+    <!-- Título centrado con estilo en negrita -->
     <ion-title class="ion-text-center ion-title-bold">Mis Tareas</ion-title>
   </ion-toolbar>
 </ion-header>
 
+<!-- Contenedor principal de la pantalla -->
 <ion-content [fullscreen]="true">
+  
+  <!-- Fila de entrada para escribir la nueva tarea -->
   <ion-item>
+    <!-- Campo de texto vinculado a la variable 'task' del TS mediante enlace bidireccional [(ngModel)] -->
     <ion-input 
       type="text" 
       placeholder="Nueva Tarea" 
@@ -13,32 +20,46 @@
       [(ngModel)]="task">
     </ion-input>
 
+    <!-- Botón para agregar tareas -->
+    <!-- [disabled]="!task.trim()" deshabilita el botón automáticamente si la barra está vacía o solo tiene espacios -->
     <ion-button slot="end" (click)="addTask()" [disabled]="!task.trim()">
       <ion-icon name="add-outline"></ion-icon>
     </ion-button>
   </ion-item>
 
+  <!-- Control de flujo @if / @else propio de Angular Standalone -->
   @if (tasks.length === 0) {
+    <!-- Mensaje informativo que se muestra únicamente cuando el arreglo 'tasks' está vacío -->
     <ion-label class="ion-text-center" style="display: block; margin-top: 20px;">
       No hay tareas pendientes
     </ion-label>
   } @else {
+    <!-- Lista que agrupa los elementos registrados -->
     <ion-list>
+      <!-- Grupo que habilita la función de reordenar elementos mediante arrastre -->
+      <!-- (ionReorderEnd) dispara el método handleReorder() al soltar una tarea -->
       <ion-reorder-group [disabled]="false" (ionReorderEnd)="handleReorder($event)">
+        
+        <!-- Bucle @for que recorre el arreglo 'tasks' para renderizar cada item -->
         @for (taskItem of tasks; track $index) {
           <ion-item>
+            <!-- Manija visual (tres líneas horizontales) desde donde el usuario arrastra la tarea -->
             <ion-reorder slot="start">
               <ion-icon name="reorder-three-outline"></ion-icon>
             </ion-reorder>
 
+            <!-- Muestra la descripción de la tarea actual -->
             <ion-label>{{ taskItem }}</ion-label>
 
+            <!-- Botón rojo sin fondo para solicitar la eliminación de la tarea mediante confirmDelete() -->
             <ion-button slot="end" color="danger" fill="clear" (click)="confirmDelete(taskItem)">
               <ion-icon name="trash-outline"></ion-icon>
             </ion-button>
           </ion-item>
         }
+
       </ion-reorder-group>
     </ion-list>
   }
+
 </ion-content>
